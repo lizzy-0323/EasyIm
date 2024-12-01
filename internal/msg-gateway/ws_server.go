@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -21,6 +22,7 @@ var wsUpgrader = websocket.Upgrader{
 type WsServer struct {
 	address        string
 	Port           int
+	clientPool     sync.Pool
 	registerChan   chan *Client
 	unregisterChan chan *Client
 }
@@ -39,9 +41,9 @@ func (ws *WsServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Error("upgrade connection failed, err: %v", zap.Error(err))
 		return
 	}
-	client := NewClient(conn)
-	ws.registerChan <- client
-	go client.ReadMessage()
+	client := ws.clientPool.Get().(*Client)
+	client.Reset(conn)
+	client.ReadMessage()
 }
 
 func (ws *WsServer) Run(done chan error) error {
@@ -50,24 +52,22 @@ func (ws *WsServer) Run(done chan error) error {
 	server := http.Server{Addr: ws.address + ":" + strconv.Itoa(ws.Port), Handler: nil}
 	http.HandleFunc("/ws", ws.wsHandler)
 
-	var shutdownDone = make(chan struct{}, 1)
-
 	// start listening for signal
-	go func() {
-		for {
-			select {
-			case <-ws.registerChan:
-				// TODO:
-				log.Info("register ws connection")
-			case <-ws.unregisterChan:
-				// TODO:
-				log.Info("unregister ws connection")
-			case <-shutdownDone:
-				return
-			}
+	// go func() {
+	// 	for {
+	// 		select {
+	// 		case <-ws.registerChan:
+	// 			// TODO: add client to pools and check multiple connection
+	// 			log.Info("register ws connection")
+	// 		case <-ws.unregisterChan:
+	// 			// TODO:
+	// 			log.Info("unregister ws connection")
+	// 		case <-shutdownDone:
+	// 			return
+	// 		}
 
-		}
-	}()
+	// 	}
+	// }()
 
 	// start server
 	go func() {
@@ -90,7 +90,7 @@ func (ws *WsServer) Run(done chan error) error {
 		if err != nil {
 			return err
 		}
-		close(shutdownDone)
+		// close(shutdownDone)
 		// TODO: add more case
 	}
 

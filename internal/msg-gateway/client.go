@@ -1,45 +1,168 @@
 package msggateway
 
 import (
+	"context"
+	"go-im/config"
+	"go-im/pkg/protocol/pb"
+	"go-im/pkg/rpc"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
-
-const (
-	MessageText = iota + 1
-	MessageClose
-	MessagePing
-	MessagePong
-)
-
-func NewClient(conn *websocket.Conn) *Client {
-	return &Client{
-		conn: conn,
-		m:    sync.Mutex{},
-	}
-}
 
 type Client struct {
-	conn *websocket.Conn
-	m    sync.Mutex
+	deviceId int64
+	userId   int64
+	conn     *websocket.Conn
+	m        sync.Mutex
 }
 
-func (c *Client) HandleMessage(msg []byte, msgType int) {
-	// handle message
-	switch msgType {
-	case MessageText:
-		// handle text message
-	case MessageClose:
+func (c *Client) GetAddr() string {
+	return c.conn.RemoteAddr().String()
+}
+
+func (c *Client) HandleSignIn(input *pb.Input) {
+	var signIn pb.SignInInput
+	err := proto.Unmarshal(input.Data, &signIn)
+	if err != nil {
+		log.Sugar().Error(err)
 		return
-	case MessagePing:
-		// handle ping message
-	case MessagePong:
-		// handle pong message
-	default:
 	}
+
+	// 获取rpc client
+	_, err = rpc.GetLogicIntClient().ConnSignIn(context.Background(), &pb.ConnSignInReq{
+		UserId:     signIn.UserId,
+		DeviceId:   signIn.DeviceId,
+		Token:      signIn.Token,
+		ConnAddr:   config.Config.ConnectLocalAddr,
+		ClientAddr: c.GetAddr(),
+	})
+
+	c.Send(pb.PackageType_PT_SIGN_IN, input.RequestId, nil, err)
+	if err != nil {
+		return
+	}
+
+	c.userId = signIn.UserId
+	c.deviceId = signIn.DeviceId
+	SetConn(signIn.DeviceId, c)
+}
+
+func (c *Client) Close() {
+	if c.deviceId != 0 {
+		DeleteConn(c.deviceId)
+	}
+
+	if c.deviceId != 0 {
+		_, _ = rpc.GetLogicIntClient().Offline(context.TODO(), &pb.OfflineReq{
+			UserId:     c.userId,
+			DeviceId:   c.deviceId,
+			ClientAddr: c.GetAddr(),
+		})
+	}
+	// close websocket connection
+	c.conn.Close()
+}
+
+func (c *Client) HandleHeartbeat(input *pb.Input) {
+	c.Send(pb.PackageType_PT_HEARTBEAT, input.RequestId, nil, nil)
+
+	log.Sugar().Infow("heartbeat", "userId", c.userId, "deviceId", c.deviceId)
+}
+
+// MessageAck 消息收到回执
+func (c *Client) MessageAck(input *pb.Input) {
+	var messageAck pb.MessageACK
+	err := proto.Unmarshal(input.Data, &messageAck)
+	if err != nil {
+		log.Sugar().Error(err)
+		return
+	}
+
+	_, err = rpc.GetLogicIntClient().MessageACK(context.TODO(), &pb.MessageACKReq{
+		UserId:      c.userId,
+		DeviceId:    c.deviceId,
+		DeviceAck:   messageAck.DeviceAck,
+		ReceiveTime: messageAck.ReceiveTime,
+	})
+}
+
+// Send
+func (c *Client) Send(pt pb.PackageType, requestId int64, message proto.Message, err error) {
+	var output = pb.Output{
+		Type:      pt,
+		RequestId: requestId,
+	}
+
+	if err != nil {
+		status, _ := status.FromError(err)
+		output.Code = int32(status.Code())
+		output.Message = status.Message()
+	}
+
+	if message != nil {
+		data, err := proto.Marshal(message)
+		if err != nil {
+			log.Sugar().Error(err)
+			return
+		}
+		output.Data = data
+	}
+
+	outputBytes, err := proto.Marshal(&output)
+	if err != nil {
+		log.Sugar().Error(err)
+		return
+	}
+
+	err = c.Write(outputBytes)
+	if err != nil {
+		log.Sugar().Error(err)
+		c.Close()
+		return
+	}
+}
+
+func (c *Client) Write(msg []byte) error {
+	// write to websocket
+	c.m.Lock()
+	defer c.m.Unlock()
+	err := c.conn.SetWriteDeadline(time.Now().Add(time.Second * 10))
+	if err != nil {
+		return err
+	}
+	return c.conn.WriteMessage(websocket.BinaryMessage, msg)
+}
+
+func (c *Client) HandleMessage(msg []byte) {
+	var input = new(pb.Input)
+	err := proto.Unmarshal(msg, input)
+	if err != nil {
+		log.Error("unmarshal message failed", zap.Error(err), zap.Int("len", len(msg)))
+		return
+	}
+	log.Debug("recv message", zap.Any("input", input))
+	switch input.Type {
+	case pb.PackageType_PT_SIGN_IN:
+		c.HandleSignIn(input)
+	case pb.PackageType_PT_HEARTBEAT:
+		c.HandleHeartbeat(input)
+	case pb.PackageType_PT_MESSAGE:
+		c.MessageAck(input)
+	default:
+		log.Error("unknown message type", zap.Int32("type", int32(input.Type)))
+	}
+}
+
+func (c *Client) Reset(conn *websocket.Conn) {
+	c.conn = conn
+	c.m = sync.Mutex{}
+	c.deviceId = 0
+	c.userId = 0
 }
 
 // read message
@@ -59,12 +182,12 @@ func (c *Client) ReadMessage() {
 			log.Error("set read deadline failed", zap.Error(err))
 			break
 		}
-		msgType, msg, err := c.conn.ReadMessage()
+		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Error("read message failed", zap.Error(err))
 			return
 		}
 		log.Info("recv message: %s", zap.String("msg", string(msg)))
-		c.HandleMessage(msg, msgType)
+		c.HandleMessage(msg)
 	}
 }
