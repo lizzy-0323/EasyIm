@@ -17,19 +17,25 @@ MSG_GATEWAY=msg-gateway
 API_GATEWAY=api-gateway
 
 # Targets
-all: test build build-client build-grpc
+all: test build cli-build grpc-build
 
 .PHONY:build
-build: 
-	$(GOBUILD) -o $(BUILD_DIR)/msg-gateway -v $(SRC_DIR)/$(MSG_GATEWAY)
+build: grpc-build msg-gateway-build api-gateway-build cli-build 
+
+.PHONY: api-gateway-build
+api-gateway-build:
 	$(GOBUILD) -o $(BUILD_DIR)/api-gateway -v $(SRC_DIR)/$(API_GATEWAY)
 
-.PHONY: build-client
-build-client:	
+.PHONY: msg-gateway-build
+msg-gateway-build:
+	$(GOBUILD) -o $(BUILD_DIR)/msg-gateway -v $(SRC_DIR)/$(MSG_GATEWAY)
+
+.PHONY: cli-build
+cli-build:	
 	$(GOBUILD) -o $(BUILD_DIR)/chat  ./client/main.go
 
-.PHONY: build-grpc
-build-grpc:	
+.PHONY: grpc-build
+grpc-build:	
 	protoc --go_out=.. --go-grpc_out=.. ./pkg/protocol/proto/*.proto -I ./pkg/protocol/proto
 
 .PHONY:test
