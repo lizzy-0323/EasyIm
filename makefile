@@ -20,11 +20,7 @@ API_GATEWAY=api-gateway
 all: test build cli-build grpc-build
 
 .PHONY:build
-build: grpc-build msg-gateway-build api-gateway-build cli-build 
-
-.PHONY: api-gateway-build
-api-gateway-build:
-	$(GOBUILD) -o $(BUILD_DIR)/api-gateway -v $(SRC_DIR)/$(API_GATEWAY)
+build: grpc-build msg-gateway-build cli-build 
 
 .PHONY: msg-gateway-build
 msg-gateway-build:

@@ -15,8 +15,8 @@ import (
 )
 
 type Client struct {
-	deviceId int64
-	userId   int64
+	DeviceId int64
+	UserId   int64
 	conn     *websocket.Conn
 	m        sync.Mutex
 }
@@ -29,11 +29,10 @@ func (c *Client) HandleSignIn(input *pb.Input) {
 	var signIn pb.SignInInput
 	err := proto.Unmarshal(input.Data, &signIn)
 	if err != nil {
-		log.Sugar().Error(err)
+		log.Sugar().Errorf("unmarshal signIn failed, err: %v", err)
 		return
 	}
 
-	// 获取rpc client
 	_, err = rpc.GetLogicIntClient().ConnSignIn(context.Background(), &pb.ConnSignInReq{
 		UserId:     signIn.UserId,
 		DeviceId:   signIn.DeviceId,
@@ -47,20 +46,20 @@ func (c *Client) HandleSignIn(input *pb.Input) {
 		return
 	}
 
-	c.userId = signIn.UserId
-	c.deviceId = signIn.DeviceId
+	c.UserId = signIn.UserId
+	c.DeviceId = signIn.DeviceId
 	SetConn(signIn.DeviceId, c)
 }
 
 func (c *Client) Close() {
-	if c.deviceId != 0 {
-		DeleteConn(c.deviceId)
+	if c.DeviceId != 0 {
+		DeleteConn(c.DeviceId)
 	}
 
-	if c.deviceId != 0 {
+	if c.DeviceId != 0 {
 		_, _ = rpc.GetLogicIntClient().Offline(context.TODO(), &pb.OfflineReq{
-			UserId:     c.userId,
-			DeviceId:   c.deviceId,
+			UserId:     c.UserId,
+			DeviceId:   c.DeviceId,
 			ClientAddr: c.GetAddr(),
 		})
 	}
@@ -71,7 +70,7 @@ func (c *Client) Close() {
 func (c *Client) HandleHeartbeat(input *pb.Input) {
 	c.Send(pb.PackageType_PT_HEARTBEAT, input.RequestId, nil, nil)
 
-	log.Sugar().Infow("heartbeat", "userId", c.userId, "deviceId", c.deviceId)
+	log.Sugar().Infow("heartbeat", "UserId", c.UserId, "DeviceId", c.DeviceId)
 }
 
 // MessageAck 消息收到回执
@@ -84,8 +83,8 @@ func (c *Client) MessageAck(input *pb.Input) {
 	}
 
 	_, err = rpc.GetLogicIntClient().MessageACK(context.TODO(), &pb.MessageACKReq{
-		UserId:      c.userId,
-		DeviceId:    c.deviceId,
+		UserId:      c.UserId,
+		DeviceId:    c.DeviceId,
 		DeviceAck:   messageAck.DeviceAck,
 		ReceiveTime: messageAck.ReceiveTime,
 	})
@@ -138,14 +137,16 @@ func (c *Client) Write(msg []byte) error {
 	return c.conn.WriteMessage(websocket.BinaryMessage, msg)
 }
 
-func (c *Client) HandleMessage(msg []byte) {
+// HandleMessage handle the message from websocket
+func (c *Client) HandleMessage(bytes []byte) {
 	var input = new(pb.Input)
-	err := proto.Unmarshal(msg, input)
+	err := proto.Unmarshal(bytes, input)
 	if err != nil {
-		log.Error("unmarshal message failed", zap.Error(err), zap.Int("len", len(msg)))
+		log.Error("unmarshal message failed", zap.Error(err), zap.Int("len", len(bytes)))
 		return
 	}
-	log.Debug("recv message", zap.Any("input", input))
+	log.Debug("Handle message", zap.Any("input", input))
+
 	switch input.Type {
 	case pb.PackageType_PT_SIGN_IN:
 		c.HandleSignIn(input)
@@ -161,8 +162,8 @@ func (c *Client) HandleMessage(msg []byte) {
 func (c *Client) Reset(conn *websocket.Conn) {
 	c.conn = conn
 	c.m = sync.Mutex{}
-	c.deviceId = 0
-	c.userId = 0
+	c.DeviceId = 0
+	c.UserId = 0
 }
 
 // read message
@@ -177,7 +178,7 @@ func (c *Client) ReadMessage() {
 
 	// handle websocket connection
 	for {
-		err := c.conn.SetReadDeadline(time.Now().Add(time.Second * 10))
+		err := c.conn.SetReadDeadline(time.Now().Add(12 * time.Minute))
 		if err != nil {
 			log.Error("set read deadline failed", zap.Error(err))
 			break
@@ -187,7 +188,7 @@ func (c *Client) ReadMessage() {
 			log.Error("read message failed", zap.Error(err))
 			return
 		}
-		log.Info("recv message: %s", zap.String("msg", string(msg)))
+
 		c.HandleMessage(msg)
 	}
 }

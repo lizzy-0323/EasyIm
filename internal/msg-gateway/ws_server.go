@@ -1,11 +1,8 @@
 package msggateway
 
 import (
-	"context"
 	"net/http"
-	"strconv"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -21,16 +18,19 @@ var wsUpgrader = websocket.Upgrader{
 
 type WsServer struct {
 	address        string
-	Port           int
 	clientPool     sync.Pool
 	registerChan   chan *Client
 	unregisterChan chan *Client
 }
 
-func NewWsServer(address string, port int) *WsServer {
+func NewWsServer(address string) *WsServer {
 	return &WsServer{
 		address: address,
-		Port:    port,
+		clientPool: sync.Pool{
+			New: func() any {
+				return new(Client)
+			},
+		},
 	}
 }
 
@@ -46,53 +46,16 @@ func (ws *WsServer) wsHandler(w http.ResponseWriter, r *http.Request) {
 	client.ReadMessage()
 }
 
-func (ws *WsServer) Run(done chan error) error {
-	log.Info("Start websocket server at", zap.String("address", ws.address), zap.Int("port", ws.Port))
+func (ws *WsServer) Run() {
+	log.Info("Start websocket server at", zap.String("address", ws.address))
+
 	// hand websocket connection
-	server := http.Server{Addr: ws.address + ":" + strconv.Itoa(ws.Port), Handler: nil}
-	http.HandleFunc("/ws", ws.wsHandler)
-
-	// start listening for signal
-	// go func() {
-	// 	for {
-	// 		select {
-	// 		case <-ws.registerChan:
-	// 			// TODO: add client to pools and check multiple connection
-	// 			log.Info("register ws connection")
-	// 		case <-ws.unregisterChan:
-	// 			// TODO:
-	// 			log.Info("unregister ws connection")
-	// 		case <-shutdownDone:
-	// 			return
-	// 		}
-
-	// 	}
-	// }()
+	server := http.Server{Addr: ws.address, Handler: nil}
+	http.HandleFunc("/", ws.wsHandler)
 
 	// start server
-	go func() {
-		err := server.ListenAndServe()
-		if err != nil && err != http.ErrAbortHandler {
-			done <- err
-		}
-	}()
-
-	// wait for external signal to stop
-	var err error
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	select {
-	case err = <-done:
-		sErr := server.Shutdown(ctx)
-		if sErr != nil {
-			return sErr
-		}
-		if err != nil {
-			return err
-		}
-		// close(shutdownDone)
-		// TODO: add more case
+	err := server.ListenAndServe()
+	if err != nil {
+		panic(err)
 	}
-
-	return nil
 }

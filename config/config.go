@@ -8,6 +8,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var Config Configuration
@@ -37,6 +38,8 @@ type Configuration struct {
 	ConnectIntClientBuilder  func() pb.ConnectIntClient
 	LogicIntClientBuilder    func() pb.LogicIntClient
 	BusinessIntClientBuilder func() pb.BusinessIntClient
+
+	Version string
 }
 
 type defaultBuilder struct{}
@@ -51,8 +54,10 @@ func (d *defaultBuilder) Build() Configuration {
 		LogicRPCListenAddr:    ":8010",
 		BusinessRPCListenAddr: ":8020",
 
+		Version: "debug",
+
 		ConnectIntClientBuilder: func() pb.ConnectIntClient {
-			conn, err := grpc.NewClient("addrs:///127.0.0.1:8000", grpc.WithUnaryInterceptor(interceptor),
+			conn, err := grpc.NewClient(Config.ConnectRPCListenAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(interceptor),
 				grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, "round_robin")))
 			if err != nil {
 				panic(err)
@@ -60,7 +65,7 @@ func (d *defaultBuilder) Build() Configuration {
 			return pb.NewConnectIntClient(conn)
 		},
 		LogicIntClientBuilder: func() pb.LogicIntClient {
-			conn, err := grpc.NewClient("addrs:///127.0.0.1:8010", grpc.WithUnaryInterceptor(interceptor),
+			conn, err := grpc.NewClient(Config.LogicRPCListenAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(interceptor),
 				grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, roundrobin.Name)))
 			if err != nil {
 				panic(err)
@@ -68,7 +73,7 @@ func (d *defaultBuilder) Build() Configuration {
 			return pb.NewLogicIntClient(conn)
 		},
 		BusinessIntClientBuilder: func() pb.BusinessIntClient {
-			conn, err := grpc.NewClient("addrs:///127.0.0.1:8020", grpc.WithUnaryInterceptor(interceptor),
+			conn, err := grpc.NewClient(Config.BusinessRPCListenAddr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithUnaryInterceptor(interceptor),
 				grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, roundrobin.Name)))
 			if err != nil {
 				panic(err)

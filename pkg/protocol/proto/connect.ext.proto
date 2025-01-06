@@ -13,6 +13,7 @@ enum PackageType {
 }
 
 // websocket package for input data
+
 // 上行数据
 message Input {
   PackageType type = 1;  // 包的类型

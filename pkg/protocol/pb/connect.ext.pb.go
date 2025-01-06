@@ -75,7 +75,6 @@ func (PackageType) EnumDescriptor() ([]byte, []int) {
 	return file_connect_ext_proto_rawDescGZIP(), []int{0}
 }
 
-// websocket package for input data
 // 上行数据
 type Input struct {
 	state         protoimpl.MessageState

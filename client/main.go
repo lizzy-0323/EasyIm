@@ -3,36 +3,34 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"go-im/pkg/protocol/pb"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 var addr string
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "chat",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		runChat()
-	},
-}
-
-func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&addr, "addr", "ws://localhost:8080", "WebSocket server address")
+func NewCli() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:   "chat",
+		Short: "A brief description of your application",
+		Long: `A longer description that spans multiple lines and likely contains
+	examples and usage of using your application. For example:
+	
+	Cobra is a CLI library for Go that empowers applications.
+	This application is a tool to generate the needed files
+	to quickly create a Cobra application.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			runChat()
+		},
+	}
+	rootCmd.Flags().StringVar(&addr, "addr", "ws://localhost:8002", "WebSocket server address")
+	return rootCmd
 }
 
 func runChat() {
@@ -42,6 +40,7 @@ func runChat() {
 		log.Fatal("Dial error: ", err)
 	}
 	defer c.Close()
+	netDone := make(chan error)
 
 	// Handle incoming messages
 	go func() {
@@ -49,6 +48,9 @@ func runChat() {
 			_, message, err := c.ReadMessage()
 			if err != nil {
 				log.Println("read:", err)
+				if err == websocket.ErrCloseSent {
+					netDone <- err
+				}
 				break
 			}
 			fmt.Println(string(message))
@@ -62,7 +64,17 @@ func runChat() {
 		if strings.TrimSpace(line) == "quit" {
 			break
 		}
-		err := c.WriteMessage(websocket.TextMessage, []byte(line))
+		pbFormatMsg := SignInMsg(line)
+
+		// Marshal to binary
+		msg, err := proto.Marshal(pbFormatMsg)
+		if err != nil {
+			log.Println("marshal error: ", err)
+			break
+		}
+
+		// Write to WebSocket
+		err = c.WriteMessage(websocket.BinaryMessage, msg)
 		if err != nil {
 			log.Println("write:", err)
 			break
@@ -71,10 +83,33 @@ func runChat() {
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
 	}
+	select {
+	case <-netDone:
+		fmt.Println("Connection closed")
+		c.Close()
+		return
+	default:
+	}
+}
+
+func SignInMsg(data string) *pb.Input {
+	// Using test data
+	signInPbMsg := &pb.SignInInput{
+		DeviceId: 0,
+		UserId:   1,
+		Token:    "asdasda",
+	}
+	signInData, _ := proto.Marshal(signInPbMsg)
+	return &pb.Input{
+		Type:      pb.PackageType_PT_SIGN_IN,
+		Data:      []byte(signInData),
+		RequestId: 1,
+	}
 }
 
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	cli := NewCli()
+	if err := cli.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
