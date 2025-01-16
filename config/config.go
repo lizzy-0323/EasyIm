@@ -46,6 +46,8 @@ type defaultBuilder struct{}
 
 func (d *defaultBuilder) Build() Configuration {
 	return Configuration{
+		MySQL:                "root:20010323@tcp(127.0.0.1:3306)/gim?charset=utf8mb4&parseTime=true",
+		RedisHost:            "127.0.0.1:6379",
 		ConnectLocalAddr:     "127.0.0.1:8000",
 		ConnectRPCListenAddr: ":8000",
 		ConnectTCPListenAddr: ":8001",

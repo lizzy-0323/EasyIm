@@ -13,19 +13,30 @@ BINARY_UNIX=$(BINARY_NAME)_unix
 # Directories
 SRC_DIR=./cmd
 BUILD_DIR=./bin
-MSG_GATEWAY=msg-gateway
-API_GATEWAY=api-gateway
+
+# Binarys
+CONN_SERVER=conn-server
+LOGIC_SERVER = logic-server
+BUSINESS_SERVER = business-server
 
 # Targets
 all: test build cli-build grpc-build
 
 .PHONY:build
-build: grpc-build msg-gateway-build cli-build 
+build: grpc-build cli-build conn-server logic-server business-server 
 
-.PHONY: msg-gateway-build
-msg-gateway-build:
-	$(GOBUILD) -o $(BUILD_DIR)/msg-gateway -v $(SRC_DIR)/$(MSG_GATEWAY)
+.PHONY: conn-server
+conn-server:
+	$(GOBUILD) -o $(BUILD_DIR)/$(CONN_SERVER) -v $(SRC_DIR)/$(CONN_SERVER)
 
+.PHONY: logic-server
+logic-server:
+	$(GOBUILD) -o $(BUILD_DIR)/$(LOGIC_SERVER) -v $(SRC_DIR)/$(LOGIC_SERVER)
+
+.PHONY: business-server
+business-server:
+	$(GOBUILD)  -o $(BUILD_DIR)/$(BUSINESS_SERVER) -v $(SRC_DIR)/$(BUSINESS_SERVER)
+	
 .PHONY: cli-build
 cli-build:	
 	$(GOBUILD) -o $(BUILD_DIR)/chat  ./client/main.go

@@ -2,15 +2,17 @@
 
 ## Service
 
-- msg-server
+- business-server
+- logic-server
+- connect-server
 
 ## Todo
 
-- [ ] 整合rpc请求到api-server中
 - [ ] 支持TCP协议 
 - [ ] kafka消息队列
 - [ ] prometheus监控
 - [ ] 前端支持
+- [ ] ES实现search
 - [ ] id生成算法
 
 ## 编译proto命令

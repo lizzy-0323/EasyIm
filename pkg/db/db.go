@@ -24,10 +24,10 @@ func init() {
 }
 
 // InitMysql 初始化MySQL
-func InitMysql(dataSource string) {
+func InitMysql(dsn string) {
 	logger.Logger.Info("init mysql")
 	var err error
-	DB, err = gorm.Open(mysql.Open(dataSource), &gorm.Config{
+	DB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
 		},

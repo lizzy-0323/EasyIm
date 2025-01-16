@@ -1,4 +1,4 @@
-package msggateway
+package connect
 
 import (
 	"context"
