@@ -5,6 +5,7 @@ import (
 	"errors"
 	"go-im/internal/business/domain/user/model"
 	"go-im/pkg/db"
+	"go-im/pkg/gerrors"
 	"strconv"
 
 	"github.com/go-redis/redis"
@@ -22,7 +23,7 @@ var AuthCache = new(authCache)
 func (*authCache) Get(userId, deviceId int64) (*model.Device, error) {
 	bytes, err := db.RedisCli.HGet(AuthKey+strconv.FormatInt(userId, 10), strconv.FormatInt(deviceId, 10)).Bytes()
 	if err != nil && errors.Is(err, redis.Nil) {
-		return nil, err
+		return nil, gerrors.WrapError(err)
 	}
 
 	if errors.Is(err, redis.Nil) {
@@ -32,7 +33,7 @@ func (*authCache) Get(userId, deviceId int64) (*model.Device, error) {
 	var device model.Device
 	err = json.Unmarshal(bytes, &device)
 	if err != nil {
-		return nil, err
+		return nil, gerrors.WrapError(err)
 	}
 
 	return &device, nil

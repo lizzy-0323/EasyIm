@@ -33,6 +33,10 @@ func NewCli() *cobra.Command {
 	return rootCmd
 }
 
+func registerDevice() {
+	// TODO：
+}
+
 func runChat() {
 	// Connect to the WebSocket server
 	c, _, err := websocket.DefaultDialer.Dial(addr, nil)
@@ -95,7 +99,7 @@ func runChat() {
 func SignInMsg(data string) *pb.Input {
 	// Using test data
 	signInPbMsg := &pb.SignInInput{
-		DeviceId: 0,
+		DeviceId: 1,
 		UserId:   1,
 		Token:    "asdasda",
 	}

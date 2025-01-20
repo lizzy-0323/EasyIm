@@ -28,6 +28,8 @@ func Start(ctx context.Context, rpcServerAddress string) error {
 	server := grpc.NewServer()
 
 	pb.RegisterLogicIntServer(server, &api.LogicIntServer{})
+	pb.RegisterLogicExtServer(server, &api.LogicExtServer{})
+
 	listen, err := net.Listen("tcp", rpcServerAddress)
 	if err != nil {
 		panic(err)

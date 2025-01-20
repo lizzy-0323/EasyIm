@@ -43,6 +43,7 @@ func (c *Client) HandleSignIn(input *pb.Input) {
 
 	c.Send(pb.PackageType_PT_SIGN_IN, input.RequestId, nil, err)
 	if err != nil {
+		log.Error(err.Error())
 		return
 	}
 
@@ -51,7 +52,7 @@ func (c *Client) HandleSignIn(input *pb.Input) {
 	SetConn(signIn.DeviceId, c)
 }
 
-func (c *Client) Close() {
+func (c *Client) Close() error {
 	if c.DeviceId != 0 {
 		DeleteConn(c.DeviceId)
 	}
@@ -65,6 +66,7 @@ func (c *Client) Close() {
 	}
 	// close websocket connection
 	c.conn.Close()
+	return nil
 }
 
 func (c *Client) HandleHeartbeat(input *pb.Input) {
@@ -104,12 +106,12 @@ func (c *Client) Send(pt pb.PackageType, requestId int64, message proto.Message,
 	}
 
 	if message != nil {
-		data, err := proto.Marshal(message)
+		msgBytes, err := proto.Marshal(message)
 		if err != nil {
 			log.Sugar().Error(err)
 			return
 		}
-		output.Data = data
+		output.Data = msgBytes
 	}
 
 	outputBytes, err := proto.Marshal(&output)
@@ -146,6 +148,11 @@ func (c *Client) HandleMessage(bytes []byte) {
 		return
 	}
 	log.Debug("Handle message", zap.Any("input", input))
+
+	// 对未登录的用户进行拦截
+	if input.Type != pb.PackageType_PT_SIGN_IN && c.UserId == 0 {
+		return
+	}
 
 	switch input.Type {
 	case pb.PackageType_PT_SIGN_IN:
