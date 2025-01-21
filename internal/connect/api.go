@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"go-im/pkg/grpclib"
 	"go-im/pkg/protocol/pb"
 
 	"go.uber.org/zap"
@@ -26,6 +27,6 @@ func (s *ConnIntServer) DeliverMessage(ctx context.Context, req *pb.DeliverMessa
 		log.Warn("conn.DeviceId != req.DeviceId", zap.Int64("conn.DeviceId", conn.DeviceId), zap.Int64("req.DeviceId", req.DeviceId))
 	}
 
-	conn.Send(pb.PackageType_PT_MESSAGE, 0, req.Message, nil)
+	conn.Send(pb.PackageType_PT_MESSAGE, grpclib.GetCtxRequestId(ctx), req.Message, nil)
 	return resp, nil
 }

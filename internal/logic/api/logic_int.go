@@ -5,6 +5,7 @@ import (
 	"go-im/pkg/protocol/pb"
 
 	"go-im/internal/logic/domain/device"
+	"go-im/internal/logic/domain/message"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -59,7 +60,7 @@ func (s *LogicIntServer) ServerStop(ctx context.Context, in *pb.ServerStopReq) (
 	return &emptypb.Empty{}, nil
 }
 
-// Sync 设备同步
-func (s *LogicIntServer) Sync(ctx context.Context, in *pb.SyncReq) (*pb.SyncResp, error) {
-	return nil, nil
+// Sync 设备同步消息
+func (s *LogicIntServer) Sync(ctx context.Context, req *pb.SyncReq) (*pb.SyncResp, error) {
+	return message.App.Sync(ctx, req.UserId, req.Seq)
 }

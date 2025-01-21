@@ -3,6 +3,7 @@ package connect
 import (
 	"context"
 	"go-im/config"
+	"go-im/pkg/grpclib"
 	"go-im/pkg/protocol/pb"
 	"go-im/pkg/rpc"
 	"sync"
@@ -75,6 +76,31 @@ func (c *Client) HandleHeartbeat(input *pb.Input) {
 	log.Sugar().Infow("heartbeat", "UserId", c.UserId, "DeviceId", c.DeviceId)
 }
 
+func (c *Client) HandleSync(input *pb.Input) {
+	var sync pb.SyncInput
+	err := proto.Unmarshal(input.Data, &sync)
+	if err != nil {
+		log.Sugar().Error(err)
+		return
+	}
+
+	// 换设备登录或者第一次登录时，seq应该传0
+	resp, err := rpc.GetLogicIntClient().Sync(grpclib.ContextWithRequestId(context.TODO(), input.RequestId), &pb.SyncReq{
+		UserId:   c.UserId,
+		DeviceId: c.DeviceId,
+		Seq:      sync.Seq,
+	})
+
+	var message proto.Message
+	if err != nil {
+		message = &pb.SyncOutput{
+			Messages: resp.Messages,
+			HasMore:  resp.HasMore,
+		}
+	}
+	c.Send(pb.PackageType_PT_SYNC, input.RequestId, message, err)
+}
+
 // MessageAck 消息收到回执
 func (c *Client) MessageAck(input *pb.Input) {
 	var messageAck pb.MessageACK
@@ -84,7 +110,7 @@ func (c *Client) MessageAck(input *pb.Input) {
 		return
 	}
 
-	_, err = rpc.GetLogicIntClient().MessageACK(context.TODO(), &pb.MessageACKReq{
+	_, err = rpc.GetLogicIntClient().MessageACK(grpclib.ContextWithRequestId(context.TODO(), input.RequestId), &pb.MessageACKReq{
 		UserId:      c.UserId,
 		DeviceId:    c.DeviceId,
 		DeviceAck:   messageAck.DeviceAck,
@@ -157,6 +183,8 @@ func (c *Client) HandleMessage(bytes []byte) {
 	switch input.Type {
 	case pb.PackageType_PT_SIGN_IN:
 		c.HandleSignIn(input)
+	case pb.PackageType_PT_SYNC:
+		c.HandleSync(input)
 	case pb.PackageType_PT_HEARTBEAT:
 		c.HandleHeartbeat(input)
 	case pb.PackageType_PT_MESSAGE:

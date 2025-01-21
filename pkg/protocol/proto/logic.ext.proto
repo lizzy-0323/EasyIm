@@ -179,9 +179,11 @@ message DeleteGroupMemberReq {
 message GetGroupMembersReq {
   int64 group_id = 1;
 }
+
 message GetGroupMembersResp {
   repeated GroupMember members = 1;
 }
+
 message GroupMember {
   int64 user_id = 1;
   string nickname = 2;         // 昵称

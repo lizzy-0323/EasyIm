@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"go-im/internal/logic/domain/device"
+	"go-im/internal/logic/domain/friend"
+	"go-im/pkg/grpclib"
 	"go-im/pkg/protocol/pb"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -23,7 +25,17 @@ func (s *LogicExtServer) PushRoom(ctx context.Context, req *pb.PushRoomReq) (*em
 }
 
 func (*LogicExtServer) SendMessageToFriend(ctx context.Context, in *pb.SendMessageReq) (*pb.SendMessageResp, error) {
-	return nil, nil
+	userId, deviceId, err := grpclib.GetCtxData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	seq, err := friend.App.SendToFriend(ctx, deviceId, userId, in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.SendMessageResp{Seq: seq}, nil
 }
 
 func (s *LogicExtServer) AddFriend(ctx context.Context, in *pb.AddFriendReq) (*emptypb.Empty, error) {

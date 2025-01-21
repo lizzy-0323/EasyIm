@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"go-im/config"
 	"go-im/pkg/protocol/pb"
 )
@@ -30,4 +31,18 @@ func GetBusinessIntClient() pb.BusinessIntClient {
 		businessIntClient = config.Config.BusinessIntClientBuilder()
 	}
 	return businessIntClient
+}
+
+func GetSender(deviceID, userID int64) (*pb.Sender, error) {
+	user, err := GetBusinessIntClient().GetUser(context.TODO(), &pb.GetUserReq{UserId: userID})
+	if err != nil {
+		return nil, err
+	}
+	return &pb.Sender{
+		UserId:    userID,
+		DeviceId:  deviceID,
+		AvatarUrl: user.User.AvatarUrl,
+		Nickname:  user.User.Nickname,
+		Extra:     user.User.Extra,
+	}, nil
 }
