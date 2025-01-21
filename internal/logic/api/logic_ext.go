@@ -20,10 +20,6 @@ func (*LogicExtServer) RegisterDevice(ctx context.Context, in *pb.RegisterDevice
 	return &pb.RegisterDeviceResp{DeviceId: deviceId}, err
 }
 
-func (s *LogicExtServer) PushRoom(ctx context.Context, req *pb.PushRoomReq) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
-}
-
 func (*LogicExtServer) SendMessageToFriend(ctx context.Context, in *pb.SendMessageReq) (*pb.SendMessageResp, error) {
 	userId, deviceId, err := grpclib.GetCtxData(ctx)
 	if err != nil {
@@ -38,20 +34,58 @@ func (*LogicExtServer) SendMessageToFriend(ctx context.Context, in *pb.SendMessa
 	return &pb.SendMessageResp{Seq: seq}, nil
 }
 
+func (s *LogicExtServer) PushRoom(ctx context.Context, req *pb.PushRoomReq) (*emptypb.Empty, error) {
+	return &emptypb.Empty{}, nil
+}
+
 func (s *LogicExtServer) AddFriend(ctx context.Context, in *pb.AddFriendReq) (*emptypb.Empty, error) {
+	userId, _, err := grpclib.GetCtxData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = friend.App.AddFriend(ctx, userId, in.FriendId, in.Remarks, in.Description)
+	if err != nil {
+		return nil, err
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
 func (s *LogicExtServer) AgreeAddFriend(ctx context.Context, in *pb.AgreeAddFriendReq) (*emptypb.Empty, error) {
+	userId, _, err := grpclib.GetCtxData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = friend.App.AgreeAddFriend(ctx, userId, in.UserId, in.Remarks)
+	if err != nil {
+		return nil, err
+	}
+
 	return &emptypb.Empty{}, nil
 }
 
 func (s *LogicExtServer) SetFriend(ctx context.Context, req *pb.SetFriendReq) (*pb.SetFriendResp, error) {
+	userId, _, err := grpclib.GetCtxData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = friend.App.SetFriend(ctx, userId, req)
+	if err != nil {
+		return nil, err
+	}
 	return &pb.SetFriendResp{}, nil
 }
 
 func (s *LogicExtServer) GetFriends(ctx context.Context, in *emptypb.Empty) (*pb.GetFriendsResp, error) {
-	return nil, nil
+	userId, _, err := grpclib.GetCtxData(ctx)
+	if err != nil {
+		return nil, err
+	}
+	friends, err := friend.App.List(ctx, userId)
+	return &pb.GetFriendsResp{Friends: friends}, err
 }
 
 // SendMessageToGroup 发送群组消息

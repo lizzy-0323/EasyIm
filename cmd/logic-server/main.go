@@ -3,9 +3,17 @@ package main
 import (
 	"go-im/config"
 	"go-im/internal/logic"
+	"go-im/internal/logic/domain/device"
+	"go-im/internal/logic/domain/message"
+	"go-im/internal/logic/proxy"
 
 	"github.com/spf13/cobra"
 )
+
+func init() {
+	proxy.MessageProxy = message.App
+	proxy.DeviceProxy = device.App
+}
 
 // start logic server
 func main() {

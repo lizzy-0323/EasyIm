@@ -19,3 +19,8 @@ func (*app) Sync(ctx context.Context, userId, seq int64) (*pb.SyncResp, error) {
 func (*app) MessageAck(ctx context.Context, userId, deviceId, ack int64) error {
 	return service.DeviceAckService.Update(ctx, userId, deviceId, ack)
 }
+
+// SendToUser 发送消息给用户
+func (*app) SendToUser(ctx context.Context, fromDeviceID, toUserID int64, message *pb.Message, isPersist bool) (int64, error) {
+	return service.MessageService.SendToUser(ctx, fromDeviceID, toUserID, message, isPersist)
+}
