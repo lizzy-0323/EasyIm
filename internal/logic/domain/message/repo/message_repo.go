@@ -10,11 +10,11 @@ type messageRepo struct{}
 
 var MessageRepo = new(messageRepo)
 
-const TABLE_NAME = "message"
+const MESSAGE_TABLE = "message"
 
 // Save 插入一条消息
 func (d *messageRepo) Save(message model.Message) error {
-	err := db.DB.Table(TABLE_NAME).Create(&message).Error
+	err := db.DB.Table(MESSAGE_TABLE).Create(&message).Error
 	if err != nil {
 		return gerrors.WrapError(err)
 	}
@@ -23,7 +23,7 @@ func (d *messageRepo) Save(message model.Message) error {
 
 // ListBySeq 根据类型和id查询大于序号大于seq的消息
 func (d *messageRepo) ListBySeq(userId, seq, limit int64) ([]model.Message, bool, error) {
-	DB := db.DB.Table(TABLE_NAME).Where("user_id = ? and seq > ?", userId, seq)
+	DB := db.DB.Table(MESSAGE_TABLE).Where("user_id = ? and seq > ?", userId, seq)
 	var count int64
 	err := DB.Count(&count).Error
 	if err != nil {

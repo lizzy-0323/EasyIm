@@ -60,7 +60,7 @@ func (*authService) SignIn(ctx context.Context, phoneNumber, code string, device
 }
 
 func Verify(phoneNumber, code string) bool {
-	// TODO:
+	// TODO: 验证码校验逻辑
 	return true
 }
 

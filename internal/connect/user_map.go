@@ -4,7 +4,6 @@ import (
 	"sync"
 )
 
-// TODO: 完善结构
 var UserMap = sync.Map{}
 
 // SetConn 存储

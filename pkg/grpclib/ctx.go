@@ -64,3 +64,17 @@ func GetCtxData(ctx context.Context) (int64, int64, error) {
 	}
 	return userId, deviceId, nil
 }
+
+func NewAndCopyRequestId(ctx context.Context) context.Context {
+	newCtx := context.TODO()
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return newCtx
+	}
+
+	requestIds, ok := md[CtxRequestId]
+	if !ok && len(requestIds) == 0 {
+		return newCtx
+	}
+	return metadata.NewOutgoingContext(newCtx, metadata.Pairs(CtxRequestId, requestIds[0]))
+}
