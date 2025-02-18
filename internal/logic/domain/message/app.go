@@ -24,3 +24,7 @@ func (*app) MessageAck(ctx context.Context, userId, deviceId, ack int64) error {
 func (*app) SendToUser(ctx context.Context, fromDeviceID, toUserID int64, message *pb.Message, isPersist bool) (int64, error) {
 	return service.MessageService.SendToUser(ctx, fromDeviceID, toUserID, message, isPersist)
 }
+
+func (*app) PushAll(ctx context.Context, req *pb.PushAllReq) error {
+	return service.PushService.PushAll(ctx, req)
+}

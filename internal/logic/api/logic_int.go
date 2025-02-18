@@ -2,10 +2,13 @@ package api
 
 import (
 	"context"
+	"go-im/pkg/logger"
 	"go-im/pkg/protocol/pb"
 
 	"go-im/internal/logic/domain/device"
 	"go-im/internal/logic/domain/message"
+	"go-im/internal/logic/domain/room"
+	"go-im/internal/logic/proxy"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -28,7 +31,7 @@ func (*LogicIntServer) GetDevice(ctx context.Context, req *pb.GetDeviceReq) (*pb
 
 // MessageACK 设备收到消息ack
 func (*LogicIntServer) MessageACK(ctx context.Context, req *pb.MessageACKReq) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+	return &emptypb.Empty{}, message.App.MessageAck(ctx, req.UserId, req.DeviceId, req.DeviceAck)
 }
 
 // Offline 设备离线
@@ -37,26 +40,36 @@ func (*LogicIntServer) Offline(ctx context.Context, req *pb.OfflineReq) (*emptyp
 }
 
 func (s *LogicIntServer) SubscribeRoom(ctx context.Context, req *pb.SubscribeRoomReq) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+	return &emptypb.Empty{}, room.App.SubscribeRoom(ctx, req)
 }
 
 // Push 推送
 func (*LogicIntServer) Push(ctx context.Context, req *pb.PushReq) (*pb.PushResp, error) {
-	return nil, nil
+	seq, err := proxy.PushToUserBytes(ctx, req.UserId, req.Code, req.Content, req.IsPersist)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.PushResp{Seq: seq}, nil
 }
 
 // PushRoom 推送房间
 func (s *LogicIntServer) PushRoom(ctx context.Context, req *pb.PushRoomReq) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+	return &emptypb.Empty{}, room.App.Push(ctx, req)
 }
 
 // PushAll 全服推送
 func (s *LogicIntServer) PushAll(ctx context.Context, req *pb.PushAllReq) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+	return &emptypb.Empty{}, message.App.PushAll(ctx, req)
 }
 
 // ServerStop 服务停止
 func (s *LogicIntServer) ServerStop(ctx context.Context, in *pb.ServerStopReq) (*emptypb.Empty, error) {
+	go func() {
+		err := device.App.ServerStop(ctx, in.ConnAddr)
+		if err != nil {
+			logger.Sugar.Error(err)
+		}
+	}()
 	return &emptypb.Empty{}, nil
 }
 

@@ -73,3 +73,7 @@ func (*app) Register(ctx context.Context, in *pb.RegisterDeviceReq) (int64, erro
 func (*app) ListOnlineByUserId(ctx context.Context, userId int64) ([]*pb.Device, error) {
 	return Service.ListOnlineByUserId(ctx, userId)
 }
+
+func (*app) ServerStop(ctx context.Context, connAddr string) error {
+	return Service.ServerStop(ctx, connAddr)
+}

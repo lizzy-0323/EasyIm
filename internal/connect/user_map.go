@@ -1,6 +1,7 @@
 package connect
 
 import (
+	"go-im/pkg/protocol/pb"
 	"sync"
 )
 
@@ -23,4 +24,13 @@ func GetConn(deviceId int64) *Client {
 // DeleteConn 删除
 func DeleteConn(deviceId int64) {
 	UserMap.Delete(deviceId)
+}
+
+// PushAll 全服推送
+func PushAll(message *pb.Message) {
+	UserMap.Range(func(key, value interface{}) bool {
+		conn := value.(*Client)
+		conn.Send(pb.PackageType_PT_MESSAGE, 0, message, nil)
+		return true
+	})
 }

@@ -1,9 +1,11 @@
 package connect
 
 import (
+	"container/list"
 	"context"
 	"go-im/config"
 	"go-im/pkg/grpclib"
+	"go-im/pkg/logger"
 	"go-im/pkg/protocol/pb"
 	"go-im/pkg/rpc"
 	"sync"
@@ -18,8 +20,10 @@ import (
 type Client struct {
 	DeviceId int64
 	UserId   int64
+	RoomId   int64
 	conn     *websocket.Conn
 	m        sync.Mutex
+	Element  *list.Element
 }
 
 func (c *Client) GetAddr() string {
@@ -189,8 +193,33 @@ func (c *Client) HandleMessage(bytes []byte) {
 		c.HandleHeartbeat(input)
 	case pb.PackageType_PT_MESSAGE:
 		c.MessageAck(input)
+	case pb.PackageType_PT_SUBSCRIBE_ROOM:
+		c.HandleSubscribeRoom(input)
 	default:
 		log.Error("unknown message type", zap.Int32("type", int32(input.Type)))
+	}
+}
+
+// HandleSubscribeRoom 订阅房间
+func (c *Client) HandleSubscribeRoom(input *pb.Input) {
+	var subscribeRoom pb.SubscribeRoomInput
+	err := proto.Unmarshal(input.Data, &subscribeRoom)
+	if err != nil {
+		logger.Sugar.Error(err)
+		return
+	}
+
+	SubscribedRoom(c, subscribeRoom.RoomId)
+	c.Send(pb.PackageType_PT_SUBSCRIBE_ROOM, input.RequestId, nil, nil)
+	_, err = rpc.GetLogicIntClient().SubscribeRoom(context.TODO(), &pb.SubscribeRoomReq{
+		UserId:   c.UserId,
+		DeviceId: c.DeviceId,
+		RoomId:   subscribeRoom.RoomId,
+		Seq:      subscribeRoom.Seq,
+		ConnAddr: config.Config.ConnectLocalAddr,
+	})
+	if err != nil {
+		logger.Logger.Error("SubscribedRoom error", zap.Error(err))
 	}
 }
 
@@ -225,5 +254,28 @@ func (c *Client) ReadMessage() {
 		}
 
 		c.HandleMessage(msg)
+	}
+}
+
+// SubscribedRoom 订阅房间
+func (c *Client) SubscribedRoom(input *pb.Input) {
+	var subscribeRoom pb.SubscribeRoomInput
+	err := proto.Unmarshal(input.Data, &subscribeRoom)
+	if err != nil {
+		logger.Sugar.Error(err)
+		return
+	}
+
+	SubscribedRoom(c, subscribeRoom.RoomId)
+	c.Send(pb.PackageType_PT_SUBSCRIBE_ROOM, input.RequestId, nil, nil)
+	_, err = rpc.GetLogicIntClient().SubscribeRoom(context.TODO(), &pb.SubscribeRoomReq{
+		UserId:   c.UserId,
+		DeviceId: c.DeviceId,
+		RoomId:   subscribeRoom.RoomId,
+		Seq:      subscribeRoom.Seq,
+		ConnAddr: config.Config.ConnectLocalAddr,
+	})
+	if err != nil {
+		logger.Logger.Error("SubscribedRoom error", zap.Error(err))
 	}
 }

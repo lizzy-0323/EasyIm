@@ -3,8 +3,12 @@ package business
 import (
 	"context"
 	"go-im/internal/business/api"
+	"go-im/pkg/logger"
 	"go-im/pkg/protocol/pb"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -26,6 +30,15 @@ func Start(ctx context.Context, rpcServerAddress string) error {
 
 	// start business server
 	server := grpc.NewServer()
+
+	// 监听服务关闭信号，服务平滑重启
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGTERM)
+		s := <-c
+		logger.Logger.Info("server stop", zap.Any("signal", s))
+		server.GracefulStop()
+	}()
 
 	pb.RegisterBusinessIntServer(server, &api.BusinessIntServer{})
 	pb.RegisterBusinessExtServer(server, &api.BusinessExtServer{})

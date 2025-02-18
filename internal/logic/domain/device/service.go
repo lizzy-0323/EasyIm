@@ -2,8 +2,12 @@ package device
 
 import (
 	"context"
+	"go-im/pkg/logger"
 	"go-im/pkg/protocol/pb"
 	"go-im/pkg/rpc"
+	"time"
+
+	"go.uber.org/zap"
 )
 
 type service struct{}
@@ -55,4 +59,21 @@ func (*service) ListOnlineByUserId(ctx context.Context, userId int64) ([]*pb.Dev
 		pbDevices[i] = devices[i].ToProto()
 	}
 	return pbDevices, nil
+}
+
+func (*service) ServerStop(ctx context.Context, connAddr string) error {
+	devices, err := Repo.ListOnlineByConnAddr(connAddr)
+	if err != nil {
+		return err
+	}
+
+	for i := range devices {
+		// 因为是异步修改设备转台，要避免设备重连，导致状态不一致
+		err = Repo.UpdateStatusOffline(devices[i])
+		if err != nil {
+			logger.Logger.Error("DeviceRepo.Save error", zap.Any("device", devices[i]), zap.Error(err))
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	return nil
 }

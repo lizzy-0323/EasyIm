@@ -3,13 +3,14 @@ package pb;
 option go_package = "go-im/pkg/protocol/pb";
 
 import "basic.ext.proto";
- 
+
 enum PackageType {
-  PT_UNKNOWN = 0;    // 未知
-  PT_SIGN_IN = 1;    // 设备登录请求
-  PT_SYNC = 2;       // 消息同步触发
-  PT_HEARTBEAT = 3;  // 心跳
-  PT_MESSAGE = 4;    // 消息投递
+  PT_UNKNOWN = 0;         // 未知
+  PT_SIGN_IN = 1;         // 设备登录请求
+  PT_SYNC = 2;            // 消息同步触发
+  PT_HEARTBEAT = 3;       // 心跳
+  PT_MESSAGE = 4;         // 消息投递
+  PT_SUBSCRIBE_ROOM = 5;  // 订阅房间
 }
 
 // websocket package for input data
