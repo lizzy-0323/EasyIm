@@ -65,7 +65,6 @@ func (*messageService) ListByUserIdAndSeq(ctx context.Context, userId, seq int64
 			return nil, false, err
 		}
 	}
-	// 如果seq不等于0，同步序列号大于seq的信息，否则同步所有信息
 	return repo.MessageRepo.ListBySeq(userId, seq, MessageLimit)
 }
 
@@ -115,7 +114,7 @@ func (*messageService) SendToUser(ctx context.Context, fromDeviceID, toUserID in
 		}
 	}
 
-	// 查询在线设备
+	// 查询在线设备, 这里使用了redis
 	devices, err := device.App.ListOnlineByUserId(ctx, toUserID)
 	if err != nil {
 		logger.Sugar.Error(err)

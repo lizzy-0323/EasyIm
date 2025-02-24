@@ -3,7 +3,9 @@ package logic
 import (
 	"context"
 	"go-im/internal/logic/api"
+	"go-im/pkg/interceptor"
 	"go-im/pkg/protocol/pb"
+	"go-im/pkg/urlwhitelist"
 	"net"
 
 	"go.uber.org/zap"
@@ -25,7 +27,7 @@ func Start(ctx context.Context, rpcServerAddress string) error {
 	log = initLogger("debug")
 
 	// start logic server
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(interceptor.NewInterceptor("logic_interceptor", urlwhitelist.Logic)))
 
 	pb.RegisterLogicIntServer(server, &api.LogicIntServer{})
 	pb.RegisterLogicExtServer(server, &api.LogicExtServer{})

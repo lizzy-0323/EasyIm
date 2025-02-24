@@ -5,6 +5,7 @@ import (
 	"go-im/internal/logic/domain/device"
 	"go-im/internal/logic/domain/friend"
 	"go-im/internal/logic/domain/group"
+	"go-im/internal/logic/domain/room"
 	"go-im/pkg/grpclib"
 	"go-im/pkg/protocol/pb"
 
@@ -21,6 +22,7 @@ func (*LogicExtServer) RegisterDevice(ctx context.Context, in *pb.RegisterDevice
 	return &pb.RegisterDeviceResp{DeviceId: deviceId}, err
 }
 
+// SendMessageToFriend 单聊实现逻辑
 func (*LogicExtServer) SendMessageToFriend(ctx context.Context, in *pb.SendMessageReq) (*pb.SendMessageResp, error) {
 	userId, deviceId, err := grpclib.GetCtxData(ctx)
 	if err != nil {
@@ -35,10 +37,12 @@ func (*LogicExtServer) SendMessageToFriend(ctx context.Context, in *pb.SendMessa
 	return &pb.SendMessageResp{Seq: seq}, nil
 }
 
+// PushRoom 推送房间
 func (s *LogicExtServer) PushRoom(ctx context.Context, req *pb.PushRoomReq) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, nil
+	return &emptypb.Empty{}, room.App.Push(ctx, req)
 }
 
+// AddFriend 添加好友
 func (s *LogicExtServer) AddFriend(ctx context.Context, in *pb.AddFriendReq) (*emptypb.Empty, error) {
 	userId, _, err := grpclib.GetCtxData(ctx)
 	if err != nil {
@@ -67,7 +71,7 @@ func (s *LogicExtServer) AgreeAddFriend(ctx context.Context, in *pb.AgreeAddFrie
 	return &emptypb.Empty{}, nil
 }
 
-// SetFriend添加好友
+// SetFriend设置好友信息
 func (s *LogicExtServer) SetFriend(ctx context.Context, req *pb.SetFriendReq) (*pb.SetFriendResp, error) {
 	userId, _, err := grpclib.GetCtxData(ctx)
 	if err != nil {

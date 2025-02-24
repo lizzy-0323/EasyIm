@@ -33,10 +33,6 @@ func NewCli() *cobra.Command {
 	return rootCmd
 }
 
-func registerDevice() {
-	// TODO：
-}
-
 func runChat() {
 	// Connect to the WebSocket server
 	c, _, err := websocket.DefaultDialer.Dial(addr, nil)

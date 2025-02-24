@@ -8,6 +8,8 @@ import (
 	"go-im/pkg/logger"
 	"go-im/pkg/protocol/pb"
 	"go-im/pkg/rpc"
+	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -62,6 +64,11 @@ func (c *Client) Close() error {
 		DeleteConn(c.DeviceId)
 	}
 
+	// 取消订阅，需要异步出去，防止重复加锁造成死锁
+	go func() {
+		SubscribedRoom(c, 0)
+	}()
+
 	if c.DeviceId != 0 {
 		_, _ = rpc.GetLogicIntClient().Offline(context.TODO(), &pb.OfflineReq{
 			UserId:     c.UserId,
@@ -69,7 +76,8 @@ func (c *Client) Close() error {
 			ClientAddr: c.GetAddr(),
 		})
 	}
-	// close websocket connection
+
+	// close websocket connection, currently not support tcp
 	c.conn.Close()
 	return nil
 }
@@ -105,8 +113,8 @@ func (c *Client) HandleSync(input *pb.Input) {
 	c.Send(pb.PackageType_PT_SYNC, input.RequestId, message, err)
 }
 
-// MessageAck 消息收到回执
-func (c *Client) MessageAck(input *pb.Input) {
+// HandleMessageAck 消息收到回执
+func (c *Client) HandleMessageAck(input *pb.Input) {
 	var messageAck pb.MessageACK
 	err := proto.Unmarshal(input.Data, &messageAck)
 	if err != nil {
@@ -192,7 +200,7 @@ func (c *Client) HandleMessage(bytes []byte) {
 	case pb.PackageType_PT_HEARTBEAT:
 		c.HandleHeartbeat(input)
 	case pb.PackageType_PT_MESSAGE:
-		c.MessageAck(input)
+		c.HandleMessageAck(input)
 	case pb.PackageType_PT_SUBSCRIBE_ROOM:
 		c.HandleSubscribeRoom(input)
 	default:
@@ -242,18 +250,41 @@ func (c *Client) ReadMessage() {
 
 	// handle websocket connection
 	for {
-		err := c.conn.SetReadDeadline(time.Now().Add(12 * time.Minute))
+		err := c.conn.SetReadDeadline(time.Now().Add(10 * time.Minute))
 		if err != nil {
-			log.Error("set read deadline failed", zap.Error(err))
-			break
+			HandleReadErr(c, err)
+			return
 		}
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
-			log.Error("read message failed", zap.Error(err))
+			HandleReadErr(c, err)
 			return
 		}
 
 		c.HandleMessage(msg)
+	}
+}
+
+func HandleReadErr(c *Client, err error) {
+	logger.Logger.Debug("read tcp error：", zap.Int64("user_id", c.UserId),
+		zap.Int64("device_id", c.DeviceId), zap.Error(err))
+	str := err.Error()
+
+	defer c.Close()
+
+	// 服务器主动关闭连接
+	if strings.HasSuffix(str, "use of closed network connection") {
+		return
+	}
+
+	// 客户端主动关闭连接
+	if err == io.EOF {
+		return
+	}
+
+	// SetReadDeadline 之后，超时返回的错误
+	if strings.HasSuffix(str, "i/o timeout") {
+		return
 	}
 }
 

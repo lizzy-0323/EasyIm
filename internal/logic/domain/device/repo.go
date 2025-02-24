@@ -19,7 +19,7 @@ func (*repo) Save(device *Device) error {
 	if err != nil {
 		return err
 	}
-
+	// 保证缓存一致性
 	if device.UserId != 0 {
 		err = UserDeviceCache.Del(device.UserId)
 		if err != nil {

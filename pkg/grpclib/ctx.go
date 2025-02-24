@@ -42,7 +42,7 @@ func Get(ctx context.Context, key string) string {
 	return values[0]
 }
 
-// GetCtxData 获取ctx的用户数据，依次返回user_id,device_id
+// GetCtxData 获取ctx的用户数据，依次返回user_id,device_id, 可用于鉴权
 func GetCtxData(ctx context.Context) (int64, int64, error) {
 	var (
 		userId   int64
@@ -77,4 +77,9 @@ func NewAndCopyRequestId(ctx context.Context) context.Context {
 		return newCtx
 	}
 	return metadata.NewOutgoingContext(newCtx, metadata.Pairs(CtxRequestId, requestIds[0]))
+}
+
+// GetCtxToken 获取ctx的token
+func GetCtxToken(ctx context.Context) string {
+	return Get(ctx, CtxToken)
 }

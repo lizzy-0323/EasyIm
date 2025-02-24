@@ -166,7 +166,8 @@ func (s *service) SendToFriend(ctx context.Context, fromDeviceID, fromUserID int
 		Content:  bytes,
 		SendTime: req.SendTime,
 	}
-	// 发给其他设备, 这里其实是调用message service的SendToUser
+
+	// 发给发送者的其他设备, 这里其实是调用message service的SendToUser
 	seq, err := proxy.MessageProxy.SendToUser(ctx, fromDeviceID, fromUserID, msg, true)
 	if err != nil {
 		return 0, err

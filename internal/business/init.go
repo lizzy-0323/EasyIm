@@ -3,8 +3,10 @@ package business
 import (
 	"context"
 	"go-im/internal/business/api"
+	"go-im/pkg/interceptor"
 	"go-im/pkg/logger"
 	"go-im/pkg/protocol/pb"
+	"go-im/pkg/urlwhitelist"
 	"net"
 	"os"
 	"os/signal"
@@ -29,7 +31,7 @@ func Start(ctx context.Context, rpcServerAddress string) error {
 	log = initLogger("debug")
 
 	// start business server
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(interceptor.NewInterceptor("business_interceptor", urlwhitelist.Business)))
 
 	// 监听服务关闭信号，服务平滑重启
 	go func() {

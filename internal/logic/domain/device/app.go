@@ -28,6 +28,7 @@ func (*app) GetDevice(ctx context.Context, deviceId int64) (*pb.Device, error) {
 	return device.ToProto(), err
 }
 
+// Offline 设备离线
 func (*app) Offline(ctx context.Context, deviceId int64, clientAddr string) error {
 	device, err := Repo.Get(deviceId)
 	if err != nil {

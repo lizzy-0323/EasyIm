@@ -154,7 +154,7 @@ func (g *Group) SendMessage(ctx context.Context, fromDeviceID, fromUserID int64,
 		SendTime: req.SendTime,
 	}
 
-	// 如果发送者是用户，将消息发送给发送者,获取用户seq
+	// 发送给用户自己
 	userSeq, err := proxy.MessageProxy.SendToUser(ctx, fromDeviceID, fromUserID, msg, true)
 	if err != nil {
 		return 0, err
@@ -304,6 +304,7 @@ func (g *Group) PushAddMember(ctx context.Context, optUserId int64, addedIds []i
 	return nil
 }
 
+// GetMember 获取群组成员
 func (g *Group) GetMember(ctx context.Context, userId int64) *GroupUser {
 	for i := range g.Members {
 		if g.Members[i].UserId == userId {

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	app2 "go-im/internal/business/domain/user/app"
+	"go-im/pkg/grpclib"
 	"go-im/pkg/protocol/pb"
 
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -25,13 +26,27 @@ func (s *BusinessExtServer) SignIn(ctx context.Context, req *pb.SignInReq) (*pb.
 }
 
 func (s *BusinessExtServer) GetUser(ctx context.Context, req *pb.GetUserReq) (*pb.GetUserResp, error) {
-	return nil, nil
+	userId, _, err := grpclib.GetCtxData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := app2.UserApp.Get(ctx, userId)
+	return &pb.GetUserResp{User: user}, err
 }
 
 func (s *BusinessExtServer) UpdateUser(ctx context.Context, req *pb.UpdateUserReq) (*emptypb.Empty, error) {
-	return nil, nil
+	userId, _, err := grpclib.GetCtxData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return new(emptypb.Empty), app2.UserApp.Update(ctx, userId, req)
 }
 
+// SearchUser 查找用户
+// TODO: 可以采用es来优化
 func (s *BusinessExtServer) SearchUser(ctx context.Context, req *pb.SearchUserReq) (*pb.SearchUserResp, error) {
-	return nil, nil
+	users, err := app2.UserApp.Search(ctx, req.Key)
+	return &pb.SearchUserResp{Users: users}, err
 }
