@@ -17,10 +17,8 @@ var wsUpgrader = websocket.Upgrader{
 }
 
 type WsServer struct {
-	address        string
-	clientPool     sync.Pool
-	registerChan   chan *Client
-	unregisterChan chan *Client
+	address    string
+	clientPool sync.Pool
 }
 
 func NewWsServer(address string) *WsServer {

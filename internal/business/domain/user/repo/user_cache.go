@@ -4,6 +4,7 @@ import (
 	"errors"
 	"go-im/internal/business/domain/user/model"
 	"go-im/pkg/db"
+	"math/rand"
 	"strconv"
 	"time"
 
@@ -18,6 +19,11 @@ const (
 type userCache struct{}
 
 var UserCache = new(userCache)
+
+// 生成随机的过期时间
+func genRandomExpire() time.Duration {
+	return UserExpire + time.Duration(rand.Intn(3600))*time.Second
+}
 
 // Get 获取用户缓存
 func (c *userCache) Get(userId int64) (*model.User, error) {
@@ -34,7 +40,8 @@ func (c *userCache) Get(userId int64) (*model.User, error) {
 
 // Set 设置用户缓存
 func (c *userCache) Set(user model.User) error {
-	err := db.RedisUtil.Set(UserKey+strconv.FormatInt(user.Id, 10), user, UserExpire)
+	expireTime := genRandomExpire()
+	err := db.RedisUtil.Set(UserKey+strconv.FormatInt(user.Id, 10), user, expireTime)
 	if err != nil {
 		return err
 	}

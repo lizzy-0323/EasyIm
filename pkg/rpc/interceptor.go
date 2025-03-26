@@ -10,4 +10,3 @@ func interceptor(ctx context.Context, method string, req, reply interface{}, cc 
 	err := invoker(ctx, method, req, reply, cc, opts...)
 	return err
 }
-
