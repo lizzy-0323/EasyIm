@@ -27,6 +27,7 @@ func StartSubscribe() {
 	}
 }
 
+// 实现优先级推送
 func handlePushRoomMsg(priorityChannel, channel <-chan *redis.Message) {
 	for {
 		select {

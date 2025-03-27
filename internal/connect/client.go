@@ -84,7 +84,6 @@ func (c *Client) Close() error {
 
 func (c *Client) HandleHeartbeat(input *pb.Input) {
 	c.Send(pb.PackageType_PT_HEARTBEAT, input.RequestId, nil, nil)
-
 	log.Sugar().Infow("heartbeat", "UserId", c.UserId, "DeviceId", c.DeviceId)
 }
 
@@ -128,6 +127,9 @@ func (c *Client) HandleMessageAck(input *pb.Input) {
 		DeviceAck:   messageAck.DeviceAck,
 		ReceiveTime: messageAck.ReceiveTime,
 	})
+	if err != nil {
+		logger.Logger.Error("MessageACK", zap.Error(err))
+	}
 }
 
 // Send
